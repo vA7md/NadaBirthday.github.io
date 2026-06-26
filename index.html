@@ -236,10 +236,10 @@
 (function () {
   "use strict";
   var loadedWishes = [];
-  var loadedName = "Nada";
+  var loadedName = "Nadaa";
   
   // ----------------------------------------------------------- State
-  var STATE = { phase: "setup", name: "Nada", wishes: [], openGiftId: null, selectedWish: null, messageVisible: false };
+  var STATE = { phase: "setup", name: "Nadaa", wishes: [], openGiftId: null, selectedWish: null, messageVisible: false };
   var els = {
     canvas: document.getElementById("scene"),
     dock: document.getElementById("dock"),
@@ -1412,7 +1412,7 @@
 // ----------------------------------------------------------- UI wiring
    function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
    function syncName() {
-     var v = loadedName || "Nada";
+     var v = loadedName || "Nadaa";
      STATE.name = v;
      els.nameOut.textContent = v;
    }
@@ -1440,7 +1440,7 @@
    fetch('wishes.json')
      .then(function(r) { return r.json(); })
      .then(function(data) {
-       loadedName = data.name || "Nada";
+       loadedName = data.name || "Nadaa";
        loadedWishes = Array.isArray(data.wishes) ? data.wishes : [];
        // Auto-proceed if wishes are loaded
        if (loadedWishes.length > 0 && STATE.phase === "setup") {
