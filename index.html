@@ -198,9 +198,8 @@
 
   <canvas id="scene"></canvas>
 
-  <div class="toolbar">
+<div class="toolbar">
     <button class="icon-btn" id="sound" title="Sound on/off">🔊</button>
-    <button class="icon-btn" id="reset" title="Start over">↻</button>
   </div>
 
   <div class="headline">
@@ -247,15 +246,14 @@
       messageModal: document.getElementById("messageModal"),
       messageSender: document.getElementById("messageSender"),
       messageText: document.getElementById("messageText"),
-      messageClose: document.getElementById("messageClose"),
-      nameOut: document.getElementById("nameOut"),
-      action: document.getElementById("action"),
-      hint: document.getElementById("hint"),
-      confetti: document.getElementById("confetti"),
-      sound: document.getElementById("sound"),
-      reset: document.getElementById("reset"),
-      spinTip: document.getElementById("spinTip")
-    };
+    messageClose: document.getElementById("messageClose"),
+    nameOut: document.getElementById("nameOut"),
+    action: document.getElementById("action"),
+    hint: document.getElementById("hint"),
+    confetti: document.getElementById("confetti"),
+    sound: document.getElementById("sound"),
+    spinTip: document.getElementById("spinTip")
+  };
   
   var cachedVoices = [];
   var ttsEnabled = true;
@@ -1230,6 +1228,9 @@
     function ensureAudio() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function() {});
+      }
       return audioCtx;
     }
     function blip(freq, t, dur, gain, type) {
@@ -1341,6 +1342,9 @@
       STATE.selectedWish = null;
       els.messageModal.classList.remove("show");
       els.messageModal.setAttribute("aria-hidden", "true");
+      if (STATE.videoReady && STATE.phase === "wishing") {
+        celebrate();
+      }
     }
 
     function openGift(g) {
@@ -1380,24 +1384,47 @@
       }
       if (pool.length) openGift(pool[(Math.random() * pool.length) | 0]);
     }
-    function checkAllOpened() {
-      for (var i = 0; i < gifts.length; i++) {
-        if (!gifts[i].userData.hasOpened) return;
-      }
-      celebrate();
+function checkAllOpened() {
+    for (var i = 0; i < gifts.length; i++) {
+      if (!gifts[i].userData.hasOpened) return;
     }
+    STATE.videoReady = true;
+  }
 
     function celebrate() {
       if (STATE.phase === "celebrate") return;
       STATE.phase = "celebrate";
       poofSound();
-      setTimeout(playHappyBirthday, 350);
       burstConfetti(150);
       setTimeout(function () { burstConfetti(80); }, 900);
       setHint("🎉 Wishes opened! Happy Birthday, <b>" + escapeHtml(STATE.name) + "</b> 🎉");
-      els.action.textContent = "Wrap them again 🔁";
-      els.action.classList.add("ghost");
-      els.action.disabled = false;
+      showVideoModal();
+    }
+
+    function showVideoModal() {
+      var wasTtsEnabled = ttsEnabled;
+      ttsEnabled = false;
+      var video = document.createElement("video");
+      video.src = "models/video.mp4";
+      video.autoplay = true;
+      video.playsInline = true;
+      video.style.position = "fixed";
+      video.style.top = "0";
+      video.style.left = "0";
+      video.style.width = "100%";
+      video.style.height = "100%";
+      video.style.zIndex = "100";
+      video.style.objectFit = "cover";
+      video.style.background = "black";
+      video.controls = false;
+      video.onended = function() {
+        document.body.removeChild(video);
+        STATE.phase = "wishing";
+        resetGiftsVisual();
+        STATE.videoReady = false;
+        ttsEnabled = wasTtsEnabled;
+      };
+      document.body.appendChild(video);
     }
 
     function resetGiftsVisual() {
@@ -1454,10 +1481,11 @@
       els.action.classList.remove("ghost");
       buildGifts(STATE.wishes);
     }
-  // ----------------------------------------------------------- UI wiring
+    
+    // ----------------------------------------------------------- UI wiring
     function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
     function syncName() {
-      var v = loadedName || "Nadaa";
+      var v = loadedName || "Nada";
       STATE.name = v;
       els.nameOut.textContent = v;
     }
@@ -1466,32 +1494,33 @@
     els.messageModal.addEventListener("click", function (e) { if (e.target === els.messageModal) hideWishMessage(); });
     window.addEventListener("keydown", function (e) { if (e.key === "Escape" && STATE.messageVisible) hideWishMessage(); });
 
-    els.action.addEventListener("click", function () {
-        ensureAudio();
-        if (STATE.phase === "setup") {
-          syncName();
-          goDirectWithWishes(loadedWishes);
-        } else if (STATE.phase === "wishing") {
-          openOne();
-        } else if (STATE.phase === "celebrate") {
-          goSetup();
-        }
-      });
-
-    els.reset.addEventListener("click", goSetup);
-    
-    // Initialize name and load wishes
-    syncName();
-    fetch('wishes.json')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        loadedName = data.name || "Nadaa";
-        loadedWishes = Array.isArray(data.wishes) ? data.wishes : [];
-        // Auto-proceed if wishes are loaded
-        if (loadedWishes.length > 0 && STATE.phase === "setup") {
-          goDirectWithWishes(loadedWishes);
-        }
-      })
-      .catch(function() { goSetup(); });
-  })();
+els.action.addEventListener("click", function () {
+    ensureAudio();
+    if (STATE.phase === "setup") {
+      syncName();
+      goDirectWithWishes(loadedWishes);
+    } else if (STATE.phase === "wishing") {
+      openOne();
+    } else if (STATE.phase === "celebrate") {
+      STATE.phase = "wishing";
+      STATE.videoReady = false;
+      resetGiftsVisual();
+      els.action.textContent = "Open one for me 🎁";
+    }
+  });
+  
+// Initialize name and load wishes
+  syncName();
+  fetch('wishes.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      loadedName = data.name || "Nada";
+      loadedWishes = Array.isArray(data.wishes) ? data.wishes : [];
+      // Auto-proceed if wishes are loaded
+      if (loadedWishes.length > 0 && STATE.phase === "setup") {
+        goDirectWithWishes(loadedWishes);
+      }
+    })
+    .catch(function() { window.location.reload(); });
+})();
   </script>
