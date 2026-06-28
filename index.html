@@ -1031,6 +1031,13 @@
   }
   var orbit = { theta: 0.05, phi: 1.05, radius: frameCamera(), target: new THREE.Vector3(0, 1.4, 0.12), autoRotate: true };
 
+  window.addEventListener("wheel", function(e) {
+    if (STATE.phase !== "wishing" && STATE.phase !== "celebrate") return;
+    e.preventDefault();
+    orbit.radius = Math.max(4, Math.min(15, orbit.radius + e.deltaY * 0.01));
+    applyCamera();
+  }, { passive: false });
+
   function applyCamera() {
     var r = orbit.radius, p = orbit.phi, t = orbit.theta;
     camera.position.x = orbit.target.x + r * Math.sin(p) * Math.sin(t);
